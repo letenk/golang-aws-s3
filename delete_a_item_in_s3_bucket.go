@@ -14,13 +14,30 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func CreateBucket(ctx context.Context, client *s3.S3, bucketName string) (*s3.CreateBucketOutput, error) {
-	bucket := &s3.CreateBucketInput{
+func DeleteItem(ctx context.Context, sess *session.Session, bucketName string, fileName string) (*s3.DeleteObjectOutput, error) {
+	// Creates a new instance of the S3 client with a session.
+	svc := s3.New(sess)
+
+	// Delete Object
+	res, err := svc.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(bucketName),
+		Key:    aws.String(fileName),
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	res, err := client.CreateBucketWithContext(ctx, bucket)
-	return res, err
+	err = svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(fileName),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func main() {
@@ -41,24 +58,19 @@ func main() {
 	// Create new instance session
 	sess := session.New(s3Config)
 
-	// Create a instance from s3 use session above
-	s3Client := s3.New(sess)
-
 	// Create context
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// Set name for create bucket
 	bucketName := os.Getenv("BUCKET_NAME")
+	fileName := "1.png"
 
-	// Create bucket use function `CreateBucket` above
-	res, err := CreateBucket(ctx, s3Client, bucketName)
+	// Upload
+	res, err := DeleteItem(ctx, sess, bucketName, fileName)
+
 	if err != nil {
-		fmt.Printf("Couldn't create bucket: %v", err)
-		return
+		fmt.Printf("Failed delete item, err: %v", res)
 	}
-
-	fmt.Println("Successfully created bucket")
-	fmt.Printf("New bucket: %v", res)
+	fmt.Println("Successfully delete file!")
 }

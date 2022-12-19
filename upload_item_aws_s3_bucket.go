@@ -43,9 +43,11 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
+	awsRegion := os.Getenv("AWS_REGION")
+
 	// Config
 	s3Config := &aws.Config{
-		Region:      aws.String("ap-northeast-1"), // set region aws
+		Region:      aws.String(awsRegion), // set region aws
 		Credentials: credentials.NewStaticCredentials(os.Getenv("KEY_ID"), os.Getenv("SECRET_KEY"), ""),
 	}
 
